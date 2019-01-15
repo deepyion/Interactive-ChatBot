@@ -1,95 +1,97 @@
-bot_template = "BOT : {0}"
-user_template = "USER : {0}"
+#*** BUILDING AN INTERACTIVE CHATBOT***
 
-
-def respond(message):
-    # Concatenate the user's message to the end of a standard bot response
-    bot_message = "I can hear you! You said: " + message
-    # Return the result
-    return bot_message
-
-# Define a function that sends a message to the bot: send_message
-def send_message(message):
-    # Print user_template including the user_message
-    print(user_template.format(message))
-    # Get the bot's response to the message
-    response = respond(message)
-    # Print the bot template including the bot's response.
-    print(bot_template.format(response))
-
-# Send a message to the bot
-send_message("hello")
+#Import required modules
+import pandas as pd
+import random
+import re
+from rasa_nlu.converters import load_data
+from rasa_nlu.config import RasaNLUConfig
+from rasa_nlu.model import Trainer
+from matplotlib import pyplot
+from sklearn.svm import SVC
+import spacy
+import numpy as np
+import sqlite3
 
 """
-This means the bot will only respond correctly if the message matches exactly, which is a big limitation. 
-In later exercises you will create much more robust solutions.
+Part I - ELIZA technique 
+"""
+dav_said = "DAV : {0}"
+you_said = "YOU : {0}"
 
-The send_message function has already been defined for you, as well as the bot_template and user_template 
-variables.
-Define a respond() function which takes in a message argument, checks if the message has a pre-defined 
-response, and returns the response in the responses dictionary if there is a match, or the "default" message otherwise.
+#Defining the output to be displayed from bot using or concatinating the user message
+def output(out):
+    dav_message = "I can hear you! You said: " + out
+    return dav_message
+
+# Define a function that takes message to the bot: send_message and print both user and bot replies
+def send_message(out):
+    print(you_said.format(out))
+    reply = output(out)
+    print(dav_said.format(reply))
+
+# Send a message to the bot
+send_message("who arer you?")
+
+"""
+Here bot replies only if user msg is an exact match. 
+Which in many cases is quite impossible, hence say it is a limitation. 
 """
 
 # Define variables
-name = "Greg"
-weather = "cloudy"
+name = "David"
+connect = "customercare"
 
-# Define a dictionary with the predefined responses
-responses = {
+# Define a dictionary with the predefined replies
+replies = {
   "what's your name?": "my name is {0}".format(name),
-  "what's today's weather?": "the weather is {0}".format(weather),
+  "can you connect me to customercare?": "you will now be connected to {0}".format(connect),
   "default": "default message"
 }
 
-# Return the matching response if there is one, default otherwise
-def respond(message):
-    # Check if the message is in the responses
-    if message in responses:
-        # Return the matching message
-        bot_message = responses[message]
+# Define the function that defines only the matched replies, else default reply
+def output(out):
+    if out in replies:
+        dav_message = replies[out]
     else:
-        # Return the "default" message
-        bot_message = responses["default"]
-    return bot_message
+        dav_message = replies["default"]
+    return dav_message
 
+#Though its an exact match reply type, trying to make it interesting by setting list of replies to each question
+name = "David"
+music = "country"
+climate = "sunny"
+movie = "Bollywood"
 
-# Import the random module
-import random
-
-name = "Greg"
-weather = "cloudy"
-
-# Define a dictionary containing a list of responses for each message
-responses = {
-  "what's your name?": [
-      "my name is {0}".format(name),
-      "they call me {0}".format(name),
-      "I go by {0}".format(name)
-   ],
-  "what's today's weather?": [
-      "the weather is {0}".format(weather),
-      "it's {0} today".format(weather)
-    ],
+# Define a dictionary containing a list of replies for each message
+replies = {"what's your name?": [
+        "my name is {0}".format(name),
+        "they call me {0}".format(name),
+        "I go by {0}".format(name)],
+    "Can you play some music?": [
+            "Here is the music you recently listened to {0}".format(music),
+            "Playing you famous {0} music".format(music)],
+    "what's today's weather?": [
+            "the climate is {0}".format(climate),
+            "today it is mostly {0}".format(climate),
+            "it's {0} today".format(climate)],
   "default": ["default message"]
 }
 
-# Use random.choice() to choose a matching response
-def respond(message):
-    # Check if the message is in the responses
-    if message in responses:
-        # Return a random matching response
-        bot_message = random.choice(responses[message])
+# Picking a random reply from list using random.choice for the user question
+def output(out):
+    if out in replies:
+        dav_message = random.choice(replies[out])
     else:
-        # Return a random "default" response
-        bot_message = random.choice(responses["default"])
-    return bot_message
+        dav_message = random.choice(replies["default"])
+    return dav_message
 
 """
-ELIZA I: asking questions
+ELIZA I: sending questions
 
 """
 
-responses = {'question': ["I don't know :(", 'you tell me!'],
+replies = {'question': ["I don't know :(", 'you tell me!'],
  'statement': ['tell me more!',
   'why do you think that?',
   'how long have you felt this way?',
@@ -98,28 +100,27 @@ responses = {'question': ["I don't know :(", 'you tell me!'],
   'oh wow!',
   ':)']}
 
-
-def respond(message):
-    # Check for a question mark
-    if message.endswith("?"):
-        # Return a random question
-        return random.choice(responses["question"])
-    # Return a random statement
-    return random.choice(responses["statement"])
+#output() function that defines what is question and what is not, and reply accordingly
+def output(out):
+    if out.endswith("?"):
+        return random.choice(replies["question"])
+    return random.choice(replies["statement"])
 
 
-# Send messages ending in a question mark
-send_message("what's today's weather?")
-send_message("what's today's weather?")
+# Ends with a question mark
+send_message("How are you?")
+send_message("How are you?")
 
-# Send messages which don't end with a question mark
-send_message("I love building chatbots")
+# No '?' at the end
+send_message("Plan a vacation")
+send_message("I think you are awesome!")
+
 
 """
 ELIZA II: Extracting key phrases
 """
 
-rules = {'I want (.*)': ['What would it mean if you got {0}',
+set_rules = {'I want (.*)': ['What would it mean if you got {0}',
   'Why do you want {0}',
   "What's stopping you from getting {0}"],
  'do you remember (.*)': ['Did you think I would forget {0}',
@@ -132,170 +133,137 @@ rules = {'I want (.*)': ['What would it mean if you got {0}',
   'What do you think about {0}',
   'Really--if {0}']}
  
-# Define match_rule()
-def match_rule(rules, message):
-    response, phrase = "default", None
-    
-    # Iterate over the rules dictionary
-    for pattern, responses in rules.items():
-        # Create a match object
-        match = re.search(pattern, message)
-        if match is not None:
-            # Choose a random response
-            response = random.choice(responses)
-            if '{0}' in response:
-                phrase = match.group(1)
-    # Return the response and phrase
-    return response, phrase
+# Define match_setrule() that looks for the defined pattern and choose a random reply if there is a match
+def match_setrule(set_rules, out):
+    reply, phrase = "default", None
+    for pattern, replies in set_rules.items():
+        pick_match = re.search(pattern, out)
+        if pick_match is not None:
+            reply = random.choice(replies)
+            if '{0}' in reply:
+                phrase = pick_match.group(1)
+    return reply, phrase
 
-# Test match_rule
-print(match_rule(rules, "do you remember your last birthday"))
+# check if function is working as said
+print(match_setrule(set_rules, "I want to go fishing"))
 
 """
 ELIZA III: Pronouns
 """
 
 # Define replace_pronouns()
-def replace_pronouns(message):
+def replace_pronouns(out):
 
-    message = message.lower()
-    if 'me' in message:
-        # Replace 'me' with 'you'
-        return re.sub('me', 'you', message)
-    if 'my' in message:
-        # Replace 'my' with 'your'
-        return re.sub('my', 'your', message)
-    if 'your' in message:
-        # Replace 'your' with 'my'
-        return re.sub('your', 'my', message)
-    if 'you' in message:
-        # Replace 'you' with 'me'
-        return re.sub('you', 'me', message)
+    out = out.lower()
+    if 'me' in out:
+        return re.sub('I', 'you', out)
+    if 'me' in out:
+        return re.sub('me', 'you', out)
+    if 'my' in out:
+        return re.sub('my', 'your', out)
+    if 'your' in out:
+        return re.sub('your', 'my', out)
+    if 'you' in out:
+        return re.sub('you', 'me', out)
 
-    return message
+    return out
 
-print(replace_pronouns("my last birthday"))
-print(replace_pronouns("when you went to Florida"))
-print(replace_pronouns("I had my own castle"))
+print(replace_pronouns("My project is exciting"))
+print(replace_pronouns("remind me about the party"))
+print(replace_pronouns("Do I own a Ranch"))
 
 """
-ELIZA IV: Putting it all together
+ELIZA IV: Final step to gather all the functions and make it meaningful
 """
 
-# Define respond()
-def respond(message):
-    # Call match_rule
-    response, phrase = match_rule(rules, message)
-    if '{0}' in response:
-        # Replace the pronouns in the phrase
+# Define output() to make it more lively call the match_setrule and in reply:replace pronouns and send reply
+def output(out):
+    reply, phrase = match_setrule(set_rules, out)
+    if '{0}' in reply:
         phrase = replace_pronouns(phrase)
-        # Include the phrase in the response
-        response = response.format(phrase)
-    return response
+        reply = reply.format(phrase)
+    return reply
 
 # Send the messages
-send_message("do you remember your last birthday")
-send_message("do you think humans should be worried about AI")
-send_message("I want a robot friend")
-send_message("what if you could be anything you wanted")
+send_message("can you be my friend")
+send_message("do you think we can go out together")
+send_message("I am vey happy")
 
 """
 
 PART - II:
     NLU-Natural Language Understanding(Is the main part of NLP)
     
-    When we look at a sentence:
-        /      \
-       /        \
-      /          \
-Intent           Entity
-Eg:              Eg:
-school              day
-restaurant          name
-airport             date
+                            When we look at a sentence:
+                                /      \
+                               /        \
+                              /          \
+(Intention of user to find)Intent           Entity(Details of the product requested)
+to say it is search object  Eg:              Eg:
+                            school              day
+                            restaurant          name
+                            airport             distance
 """
 
 
-keywords = {'greet': ['hello', 'hi', 'hey'], 'thankyou': ['thank', 'thx'], 'goodbye': ['bye', 'farewell']}
+matched_words = {'restaurant': ['chinese', 'indian', 'mexican', 'thai'], 'direction': ['north', 'south', 'east', 'west'],
+                 'greet': ['hello', 'hi', 'hey'], 'thankyou': ['thank', 'thx'], 
+            'goodbye': ['bye', 'farewell', 'see you next time']}
 
-responses = {'default': 'default message',
+replies = {'default': 'default message',
+ 'restaurant': 'you should try Indian cuisine',
  'goodbye': 'goodbye for now',
  'greet': 'Hello you! :)',
- 'thankyou': 'you are very welcome'}
+ 'thankyou': 'you are very welcome',
+ 'direction': 'you are driving north'}
 
-# Define a dictionary of patterns
+# Define a dictionary of patterns RegX compile method is used to match the pattern and join the values
 patterns = {}
-
-# Iterate over the keywords dictionary
-for intent, keys in keywords.items():
-    # Create regular expressions and compile them into pattern objects
+for intent, keys in matched_words.items():
     patterns[intent] = re.compile('|'.join(keys))
     
-# Print the patterns
+# Look at the patterns they became pattern objects whereas in previous step values are in list
 print(patterns)
 
 """
-Intent classification with regex II 
-"""
+Intent classification with regex  and entity extraction can be done 
 
-# Define a function to find the intent of a message
-def match_intent(message):
-    matched_intent = None
-    for intent, pattern in patterns.items():
-        # Check if the pattern occurs in the message 
-        if pattern.search(message):
-            matched_intent = intent
-    return matched_intent
-
-# Define a respond function
-def respond(message):
-    # Call the match_intent function
-    intent = match_intent(message)
-    # Fall back to the default response
-    key = "default"
-
-"""
-Entity extraction with regex
-"""
-
-# Define find_name()
-def find_name(message):
-    name = None
-    # Create a pattern for checking if the keywords occur
-    name_keyword = re.compile('name|call')
-    # Create a pattern for finding capitalized words
-    name_pattern = re.compile('[A-Z]{1}[a-z]*')
-    if name_keyword.search(message):
-        # Get the matching words in the string
-        name_words = name_pattern.findall(message)
-        if len(name_words) > 0:
-            # Return the name if the keywords are present
-            name = ' '.join(name_words)
-    return name
-
-# Define respond()
-def respond(message):
-    # Find the name
-    name = find_name(message)
-    if name is None:
-        return "Hi there!"
-    else:
-        return "Hello, {0}!".format(name)
-
-# Send messages
-send_message("my name is David Copperfield")
-send_message("call me Ishmael")
-send_message("People call me Cassandra")
-
-"""
 spaCy
 """
+
+# Load the original dataset and display some of the rows
+air_tweets = pd.read_csv("E:/Fall 2018/Interview/ChatBot/Twitter_airlines_data.csv")
+air_tweets.head()
+
+# Retrieve only two columns which are going to be used later
+# and additionally rename them
+tweets = air_tweets[["airline_sentiment", "text"]]
+tweets.columns = ("sentiment", "text", )
+
+tweets.groupby("sentiment")\
+      .size()\
+      .reset_index(name="count")
+
+
+def display_length_plot(tweets_df):
+    """
+    Displays a plot of tweets' lengths for given DataFrame.
+    :param tweets_df: DataFrame
+    """
+    lengths = tweets_df["text"].str.len()\
+                               .reset_index(name="length")\
+                               .groupby("length")\
+                               .size()\
+                               .reset_index(name="count")
+    lengths.plot(x="length", y="count", kind="line")
+    
+display_length_plot(tweets)
 
 # Load the spacy model: nlp
 nlp = spacy.load('en')
 
 # Calculate the length of sentences
-n_sentences = len(sentences)
+n_sentences = len(tweets)
 
 # Calculate the dimensionality of nlp
 embedding_dim = nlp.vocab.vectors_length
@@ -304,7 +272,7 @@ embedding_dim = nlp.vocab.vectors_length
 X = np.zeros((n_sentences, embedding_dim))
 
 # Iterate over the sentences
-for idx, sentence in enumerate(sentences):
+for idx, sentence in enumerate(tweets):
     # Pass each each sentence to the nlp object to create a document
     doc = nlp(sentence)
     # Save the document's .vector attribute to the corresponding row in X
@@ -313,9 +281,6 @@ for idx, sentence in enumerate(sentences):
 """
 Intent classification with sklearn
 """
-
-# Import SVC
-from sklearn.svm import SVC
 
 # Create a support vector classifier
 clf = SVC()
@@ -335,11 +300,11 @@ from search queries.
 include_entities = ['DATE', 'ORG', 'PERSON']
 
 # Define extract_entities()
-def extract_entities(message):
+def extract_entities(out):
     # Create a dict to hold the entities
     ents = dict.fromkeys(include_entities)
     # Create a spacy document
-    doc = nlp(message)
+    doc = nlp(out)
     for ent in doc.ents:
         if ent.label_ in include_entities:
             # Save interesting entities
@@ -380,13 +345,8 @@ assign_colors(doc)
 
 
 """
-Rasa NLU
+Rasa_nlu is the package we are using 
 """
-
-# Import necessary modules
-from rasa_nlu.converters import load_data
-from rasa_nlu.config import RasaNLUConfig
-from rasa_nlu.model import Trainer
 
 # Create args dictionary
 args = {"key":"value"}
@@ -406,14 +366,11 @@ interpreter = trainer.train(training_data)
 print(interpreter.parse("I'm looking for a Mexican restaurant in the North of town"))
 
 """
-Data-efficient entity recognition: Most systems for extracting entities from text are built to extract 
-'Universal' things like names, dates, and places. I don't have enough training data 
-to make these systems perform well! So activate the MITIE entity recogniser inside rasa to extract restaurants-related 
-entities using a very small amount of training data. 
+Since it is very small data extraction and entity recognition MITIE works well for short sentences. 
+But when we decide NER on web scraped data I would say NLTK and SPACY shows better performance since
+they have more categories when compared to MITIE
 """
-# Import necessary modules
-from rasa_nlu.config import RasaNLUConfig
-from rasa_nlu.model import Trainer
+
 
 pipeline = [
     "nlp_spacy",
@@ -441,9 +398,6 @@ print(interpreter.parse("are there any good pizza places in the center?"))
 SQL statements in Python
 to run a query against the hotels database to find all the expensive hotels in the south. 
 """
-
-# Import sqlite3
-import sqlite3
 
 # Open connection to DB
 conn = sqlite3.connect('hotels.db')
@@ -493,15 +447,15 @@ print(find_hotels(params))
 
 """
 Creating SQL from natural language
-Now write a respond() function which can handle messages like "I want an expensive hotel in the south of town" 
+Now write a output() function which can handle messages like "I want an expensive hotel in the south of town" 
 and respond appropriately according to the number of matching results in a database. This is important functionality 
 for any database-backed chatbot.
 """
 
-# Define respond()
-def respond(message):
+# Define output()
+def output(out):
     # Extract the entities
-    entities = interpreter.parse(message)["entities"]
+    entities = interpreter.parse(out)["entities"]
     # Initialize an empty params dictionary
     params = {}
     # Fill the dictionary with entities
@@ -510,11 +464,11 @@ def respond(message):
 
     # Find hotels that match the dictionary
     results = find_hotels(params)
-    # Get the names of the hotels and index of the response
+    # Get the names of the hotels and index of the reply
     names = [r[0] for r in results]
     n = min(len(results),3)
-    # Select the nth element of the responses array
-    return responses[n].format(*names)
+    # Select the nth element of the replies array
+    return replies[n].format(*names)
 
 """
 Refining your search
@@ -522,11 +476,11 @@ Write a bot that allows users to add filters incrementally, in case they don't s
 preferences in one message.
 """
 
-# Define a respond function, taking the message and existing params as input
+# Define a output function, taking the message and existing params as input
 
-def respond(message, params):
+def output(out, params):
     # Extract the entities
-    entities = interpreter.parse(message)['entities']
+    entities = interpreter.parse(out)['entities']
     # Fill the dictionary with entities
     for ent in entities:
         params[ent["entity"]] = str(ent["value"])
@@ -535,80 +489,13 @@ def respond(message, params):
     results = find_hotels(params)
     names = [r[0] for r in results]
     n = min(len(results), 3)
-    # Return the appropriate response
-    return responses[n].format(*names), params
+    # Return the appropriate reply
+    return replies[n].format(*names), params
 
 # Initialize params dictionary
 params = {}
 # Pass the messages to the bot
-for message in ["I want an expensive hotel", "in the north of town"]:
-    print("USER: {}".format(message))
-    response, params = respond(message, params)
-    print("BOT: {}".format(response))
-    
-"""
-Basic negation
-Quite often you'll find your users telling you what they don't want - and that's important to understand! In general, 
-negation is a difficult problem in NLP. Here we'll take a very simple approach that works for many cases.
-"""
-
-# Define negated_ents()
-def negated_ents(phrase):
-    # Extract the entities using keyword matching
-    ents = [e for e in ["south", "north"] if e in phrase]
-    # Find the index of the final character of each entity
-    ends = sorted([phrase.index(e) + len(e) for e in ents])
-    # Initialise a list to store sentence chunks
-    chunks = []
-    # Take slices of the sentence up to and including each entitiy
-    start = 0
-    for end in ends:
-        chunks.append(phrase[start:end])
-        start = end
-    result = {}
-    # Iterate over the chunks and look for entities
-    for chunk in chunks:
-        for ent in ents:
-            if ent in chunk:
-                # If the entity is preceeded by a negation, give it the key False
-                if "not" in chunk or "n't" in chunk:
-                    result[ent] = False
-                else:
-                    result[ent] = True
-    return result  
-
-# Check that the entities are correctly assigned as True or False
-for test in tests:
-    print(negated_ents(test[0]) == test[1])
-    
-"""
-Filtering with excluded slots
-"""
-# Define the respond function
-def respond(message, params, neg_params):
-    # Extract the entities
-    entities = interpreter.parse(message)["entities"]
-    ent_vals = [e["value"] for e in entities]
-    # Look for negated entities
-    negated = negated_ents(message, ent_vals)
-    for ent in entities:
-        if ent["value"] in negated and negated[ent["value"]]:
-            neg_params[ent["entity"]] = str(ent["value"])
-        else:
-            params[ent["entity"]] = str(ent["value"])
-    # Find the hotels
-    results = find_hotels(params, neg_params)
-    names = [r[0] for r in results]
-    n = min(len(results),3)
-    # Return the correct response
-    return responses[n].format(*names), params, neg_params
-
-# Initialize params and neg_params
-params = {}
-neg_params = {}
-
-# Pass the messages to the bot
-for message in ["I want a cheap hotel", "but not in the north of town"]:
-    print("USER: {}".format(message))
-    response, params, neg_params = respond(message, params, neg_params)
-    print("BOT: {}".format(response))
+for out in ["I want an expensive hotel", "in the north of town"]:
+    print("USER: {}".format(out))
+    reply, params = output(out, params)
+    print("BOT: {}".format(reply))
